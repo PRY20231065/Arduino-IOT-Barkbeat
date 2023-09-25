@@ -1,6 +1,6 @@
 [
  {
-  "directory": "c:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\app",
+  "directory": "c:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\app",
   "arguments": [
    "C:\\Users\\eduiz\\AppData\\Local\\Arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0/bin/xtensa-esp32-elf-g++",
    "-DHAVE_CONFIG_H",
@@ -235,14 +235,17 @@
    "-DARDUINO_RUNNING_CORE=1",
    "-DARDUINO_EVENT_RUNNING_CORE=1",
    "-DARDUINO_USB_CDC_ON_BOOT=0",
-   "@C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\app\\build/build_opt.h",
-   "@C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\app\\build/file_opts",
+   "@C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\app\\build/build_opt.h",
+   "@C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\app\\build/file_opts",
    "-IC:\\Users\\eduiz\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.11\\cores\\esp32",
    "-IC:\\Users\\eduiz\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.11\\variants\\esp32",
-   "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\app\\build\\sketch\\app.ino.cpp",
+   "-IC:\\Users\\eduiz\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.11\\libraries\\WiFi\\src",
+   "-IC:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\libraries\\PubSubClient\\src",
+   "-IC:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\libraries\\NTPClient",
+   "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\app\\build\\sketch\\app.ino.cpp",
    "-o",
-   "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\app\\build\\sketch\\app.ino.cpp.o"
+   "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\app\\build\\sketch\\app.ino.cpp.o"
   ],
-  "file": "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\app\\build\\sketch\\app.ino.cpp"
+  "file": "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\app\\build\\sketch\\app.ino.cpp"
  }
 ]

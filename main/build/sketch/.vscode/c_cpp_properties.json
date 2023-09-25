@@ -1,4 +1,4 @@
-#line 1 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\app\\.vscode\\c_cpp_properties.json"
+#line 1 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\app\\.vscode\\c_cpp_properties.json"
 {
     "version": 4,
     "configurations": [
@@ -218,6 +218,8 @@
                 "C:\\Users\\eduiz\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.11\\tools\\sdk\\esp32\\qio_qspi\\include",
                 "C:\\Users\\eduiz\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.11\\cores\\esp32",
                 "C:\\Users\\eduiz\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.11\\variants\\esp32",
+                "C:\\Users\\eduiz\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\2.0.11\\libraries\\WiFi\\src",
+                "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\libraries\\PubSubClient\\src",
                 "c:\\users\\eduiz\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\include\\c++\\8.4.0",
                 "c:\\users\\eduiz\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\include\\c++\\8.4.0\\xtensa-esp32-elf",
                 "c:\\users\\eduiz\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\esp-2021r2-patch5-8.4.0\\xtensa-esp32-elf\\include\\c++\\8.4.0\\backward",

@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <WiFi.h>
+#include <PubSubClient.h>
 
 void setup() {
   // initialize digital pin 2 as an output.
@@ -12,18 +14,13 @@ void setup() {
   
 }
 
-void loop() {
+void loopAD8232() {
   if((digitalRead(40) == 1)||(digitalRead(41) == 1)){
     Serial.println('!');  
-
   }
   else{
-    // send the value of analog input 0 to serial:
     Serial.print(">Value:");
     Serial.println(analogRead(A0));
-    //Do the same for blutooth
-    
   }
-  //Wait a little to keep serial data from saturating
   delay(1);
 }
