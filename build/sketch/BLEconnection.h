@@ -1,4 +1,4 @@
-#line 1 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\main\\BLEconnection.h"
+#line 1 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\BLEconnection.h"
 #include <BLEDevice.h>  //libraries that are used in communication
 #include <BLEServer.h>
 #include <BLEUtils.h>

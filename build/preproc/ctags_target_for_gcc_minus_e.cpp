@@ -1,71 +1,129 @@
-# 1 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\main\\main.ino"
-# 2 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\main\\main.ino" 2
+# 1 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino"
+//*******************Libraries*************************
+# 3 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino" 2
+# 4 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino" 2
+# 5 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino" 2
+# 6 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino" 2
+# 7 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino" 2
+# 8 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino" 2
+# 9 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino" 2
+
+//******************Constants**************************
+# 21 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino"
+WiFiClient espClient;
+PubSubClient client(espClient);
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+//****************Variables****************************
+char payload[1000];
+char topic[150];
+char dog_uuid[37];
 
 
-//Base methods
+/**
+
+ * Variables for  MAX30102
+
+ *
+
+ */
+const byte RATE_SIZE = 4; // Increase this for more averaging. 4 is good.
+byte rates[RATE_SIZE]; // Array of heart rates
+byte rateSpot = 0;
+long lastBeat = 0; // Time at which the last beat occurred
+
+float beatsPerMinute;
+int beatAvg;
+
+//*****************Methods*****************************
+void callback(char *topic, byte *payload, unsigned int length)
+{
+    char p[length + 1];
+    memcpy(p, payload, length);
+    p[length] = 
+# 52 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino" 3 4
+               __null
+# 52 "C:\\Users\\eduiz\\OneDrive\\Documentos\\Arduino\\Proyecto-Tesis\\Arduino-IOT-Barkbeat\\src\\main\\main.ino"
+                   ;
+    Serial.write(payload, length);
+    Serial.println(topic);
+}
+
+//****************start functions*********************
+void startWifi()
+{
+    WiFi.begin("RAMON - 1 ", "ramon560");
+    Serial.println();
+    Serial.print("Waiting for WiFi...");
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.print(".");
+        delay(500);
+    }
+    Serial.println("");
+    Serial.println("WiFi Connected");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+}
+
+void startMQTT()
+{
+    client.setServer("3.208.219.123", 1883);
+    client.setCallback(callback);
+    client.connect("barkbeat", "pry20231065", "WgR4YMg724634tHQnXpz");
+    Serial.print("Connect MQTT: ");
+    Serial.println(client.connected());
+}
+
+void reconnectMQTT()
+{
+    while (!client.connected())
+    {
+        Serial.println("Attempting MQTT connection...");
+
+        // Attemp to connect
+        if (client.connect("barkbeat", "pry20231065", "WgR4YMg724634tHQnXpz"))
+        {
+            Serial.println("Connected");
+        }
+        else
+        {
+            Serial.print("Failed, rc=");
+            Serial.print(client.state());
+            Serial.println(" try again in 2 seconds");
+            // Wait 2 seconds before retrying
+            delay(2000);
+        }
+    }
+}
 
 void setup()
 {
-  Serial.begin(115200);
-  initBLE();
+    Serial.begin(115200);
+    startWifi();
+    startMQTT();
+
+    if (!client.connected())
+    {
+        reconnectMQTT();
+    }
+
+    initSensorAd8232(timeClient);
+    sprintf(dog_uuid, "%s","0b1f6d8e-886f-49c1-8b4c-19605338ec6e");
+
 }
 
 void loop()
 {
-  loopBLE();
-
-}
-
-void initBLE()
-{
-  BLEDevice::init("IoT Barkbeat Device");
-  // Create the BLE Server
-  pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks());
-  // Create the BLE Service
-  BLEService *pService = pServer->createService("0304e97e-41bb-40d7-8cd1-3c745a98ddd3" /* UART service UUID*/);
-  // Create a BLE Characteristic
-  pTxCharacteristic = pService->createCharacteristic(
-      "52cdeb43-e03d-4330-9de2-a3b5246f1745",
-      BLECharacteristic::PROPERTY_NOTIFY);
-
-  pTxCharacteristic->addDescriptor(new BLE2902());
-
-  BLECharacteristic *pRxCharacteristic = pService->createCharacteristic(
-      "a52b093a-3e56-401d-b2b2-7460b8258827",
-      BLECharacteristic::PROPERTY_WRITE);
-
-  pRxCharacteristic->setCallbacks(new MyCallbacks());
-  // Start the service
-  pService->start();
-  // Start advertising
-  pServer->getAdvertising()->start();
-  Serial.println("Waiting a client connection to notify…");
-}
-
-void loopBLE(){
-  if (deviceConnected)
-  {
-    //Serial.print(deviceConnected);
-
-    if (rxVal == "rxdata")
+    if (!client.connected())
     {
-      // Do anything here
+        reconnectMQTT();
     }
 
-    // disconnecting
-    if (!deviceConnected && oldDeviceConnected)
-    {
-      delay(500); // give the bluetooth stack the chance to get things ready
-      pServer->startAdvertising(); // restart advertising
-      Serial.println("start advertising");
-      oldDeviceConnected = deviceConnected;
-    }
-    // connecting
-    if (deviceConnected && !oldDeviceConnected)
-    {
-      // do stuff here on connecting
-      oldDeviceConnected = deviceConnected;
-    }
-  }
+    sprintf(topic, "%s", "AD8232");
+    sprintf(payload, "%s", "");
+
+    loopSensorAd8232(payload,topic, dog_uuid, client);
+    //loopAD8232();
 }

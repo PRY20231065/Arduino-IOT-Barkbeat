@@ -5,17 +5,18 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <Wire.h>
-#include "MAX30105.h"
-#include "heartRate.h"
+#include "lib/ecg_sensor/AD8232.h"
 
 //******************Constants**************************
 #define WIFISSID "RAMON - 1 "
 #define PASSWORD "ramon560"
-#define MQTT_HOST "54.165.125.147"
+#define MQTT_HOST "3.208.219.123"
 #define MQTT_USER "pry20231065"
 #define MQTT_PASS "WgR4YMg724634tHQnXpz"
-#define TOPIC_1_LABEL "AD8232"
-#define TOPIC_2_LABEL "MAX30102"
+#define TOPIC_1_ECG "AD8232"
+#define VARIABLE_1_LABEL "ECG_Sensor_data"
+
+#define TOPIC_2_PULSE "MAX30102"
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -23,26 +24,17 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
 //****************Variables****************************
-char payload[10000];
+char payload[1000];
 char topic[150];
+char dog_uuid[37]; 
 
-/**
- * Variables for AD832 ECG
- */
-char str_sensor[10];
-char str_millis[20];
-double epochseconds = 0;
-double epochmilliseconds = 0;
-double current_millis = 0;
-double current_millis_at_sensordata = 0;
-double timestampp = 0;
 
 /**
  * Variables for  MAX30102
  *
  */
 
-MAX30105 particleSensor;
+
 
 const byte RATE_SIZE = 4; // Increase this for more averaging. 4 is good.
 byte rates[RATE_SIZE];    // Array of heart rates
@@ -84,6 +76,8 @@ void startMQTT()
     client.setServer(MQTT_HOST, 1883);
     client.setCallback(callback);
     client.connect("barkbeat", MQTT_USER, MQTT_PASS);
+    Serial.print("Connect MQTT: ");
+    Serial.println(client.connected());
 }
 
 void reconnectMQTT()
@@ -119,16 +113,9 @@ void setup()
         reconnectMQTT();
     }
 
-    timeClient.update();
-    epochseconds = timeClient.getEpochTime();
-    epochmilliseconds = epochseconds * 1000;
-    // Serial.print("epochmilliseconds=");
-    // Serial.println(epochmilliseconds);
-    current_millis = millis();
-    // Serial.print("current_millis=");
-    // Serial.println(current_millis);
-    initMax30102();
-    initAD8232();
+    initSensorAd8232(timeClient);
+    sprintf(dog_uuid, "%s","0b1f6d8e-886f-49c1-8b4c-19605338ec6e");
+
 }
 
 void loop()
@@ -138,50 +125,12 @@ void loop()
         reconnectMQTT();
     }
 
-    sprintf(topic, "%s", TOPIC_1_LABEL);
+    sprintf(topic, "%s", TOPIC_1_ECG);
     sprintf(payload, "%s", "");
 
-    loopMax30102();
+    loopSensorAd8232(payload,topic, dog_uuid, client);
     //loopAD8232();
 }
 
-void initMax30102()
-{
-    pinMode(41, INPUT); // Setup for leads off detection LO +
-    pinMode(40, INPUT); // Setup for leads off detection LO -
-}
 
-void initAD8232()
-{
-    if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) // Use default I2C port, 400kHz speed
-    {
-        Serial.println("MAX30102 was not found. Please check wiring/power. ");
-        while (1)
-            ;
-    }
-    Serial.println("Place your index finger on the sensor with steady pressure.");
 
-    particleSensor.setup();                    // Configure sensor with default settings
-    particleSensor.setPulseAmplitudeRed(0x0A); // Turn Red LED to low to indicate sensor is running
-    particleSensor.setPulseAmplitudeGreen(0);  // Turn off Green LED
-}
-
-void loopMax30102()
-{
-    long irValue = particleSensor.getIR();
-    if (checkForBeat(irValue) == true)
-    {
-        long delta = millis() - lastBeat;
-        lastBeat = millis();
-        beatsPerMinute = 60 / (delta / 1000.0);
-        if (beatsPerMinute < 255 && beatsPerMinute > 20)
-        {
-            rates[rateSpot++] = (byte)beatsPerMinute; 
-            rateSpot %= RATE_SIZE;                    
-            beatAvg = 0;
-            for (byte x = 0; x < RATE_SIZE; x++)
-                beatAvg += rates[x];
-            beatAvg /= RATE_SIZE;
-        }
-    }
-}
