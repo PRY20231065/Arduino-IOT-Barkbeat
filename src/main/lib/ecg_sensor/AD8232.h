@@ -1,13 +1,10 @@
-//*******************Libraries*************************
 #ifndef AD8232_H
 #define AD8232_H
 
+/***************Libraries*********************/
 #include <NTPClient.h>
-#include <Arduino.h>
 
-/**
- * Variables for AD832 ECG
- */
+/***************Global variables**************/
 char str_sensor[10];
 char str_millis[20];
 double epochseconds = 0;
@@ -16,33 +13,22 @@ double current_millis = 0;
 double current_millis_at_sensordata = 0;
 double timestampp = 0;
 
+/****************Pines************************/
+#define LOplus 41 //LO+
+#define LOminus 40 //LO-
+#define SENSORPIN A0 //Data
 
-/**
- * Pines
- */
-#define LOplus 41
-#define LOminus 40
-#define SENSORPIN A0
-
-void initSensorAd8232(NTPClient &ntp)
+void initSensorAD8232(NTPClient &ntp)
 {
-    
-
     ntp.update();
     epochseconds = ntp.getEpochTime();
     epochmilliseconds = epochseconds * 1000;
-    // Serial.print("epochmilliseconds=");
-    // Serial.println(epochmilliseconds);
     current_millis = millis();
-    // Serial.print("current_millis=");
-    // Serial.println(current_millis);
 }
 
-void loopSensorAd8232(char (&payload)[1000], char (&topic)[150], char (&dog_uuid)[37], PubSubClient &client)
+void loopSensorAD8232(char (&payload)[500], char (&topic)[20], char (&dog_uuid)[37], PubSubClient &client)
 {
-    //sprintf(payload, "{\"%s\": [", VARIABLE_LABEL);
     sprintf(payload, "{ \"dog_id\": \"%s\", \"ecg\": [", dog_uuid);
-
     float sensor = 0;
 
     for (int i = 1; i <= 2; i++)

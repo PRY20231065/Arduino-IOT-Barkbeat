@@ -10,7 +10,7 @@
 *.bc
 *.cache
 .vscode/.cortex-debug*.json
-
+build/
 ### C ###
 # Prerequisites
 *.d
