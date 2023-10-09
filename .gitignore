@@ -82,3 +82,5 @@ dkms.conf
 # Executables
 
 # End of https://www.gitignore.io/api/c,c++,assembler
+.vscode/arduino.json
+.vscode/c_cpp_properties.json

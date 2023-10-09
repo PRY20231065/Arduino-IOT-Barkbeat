@@ -4,12 +4,13 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <Wire.h>
+#include <ArduinoJson.h>
 #include "lib/ecg_sensor/AD8232.h"
 #include "lib/bluetooth/BLEconnection.h"
 
 /*******************Constants**************************/
-#define WIFISSID "RAMON - 1 "
-#define PASSWORD "ramon560"
+// #define WIFISSID ""
+// #define PASSWORD ""
 #define MQTT_HOST "3.208.219.123"
 #define MQTT_USER "pry20231065"
 #define MQTT_PASS "WgR4YMg724634tHQnXpz"
@@ -27,7 +28,13 @@ BLEServer *pServer;
 char payload[500];
 char topic[20];
 char dog_uuid[37];
+char wifi_ssid[100];
+char wifi_passw[50];
+bool new_wifi_credentials = false;
+bool status_scan_ecg = false;
+bool initialized_ecg_sensor = false;
 
+DynamicJsonDocument doc(512);
 //*****************Methods*****************************
 void callback(char *topic, byte *payload, unsigned int length)
 {
@@ -38,30 +45,52 @@ void callback(char *topic, byte *payload, unsigned int length)
     Serial.println(topic);
 }
 
+bool areWIFICredentialsEmpty()
+{
+    return (strlen(wifi_ssid) == 0 && strlen(wifi_passw) == 0);
+}
+
 //****************start functions*********************
 void startWifi()
 {
-    WiFi.begin(WIFISSID, PASSWORD);
+    WiFi.disconnect();
+
+    WiFi.begin(wifi_ssid, wifi_passw);
     Serial.println();
     Serial.print("Waiting for WiFi...");
+
+    int connectionAttempts = 0;
+
     while (WiFi.status() != WL_CONNECTED)
     {
         Serial.print(".");
         delay(500);
+        if (connectionAttempts > 10) // 10 intentos
+        {
+            pTxCharacteristic->setValue("{\"success\":false,\"msg\":\"Error de conexión. Compruebe las credenciales de red proporcionadas e inténtelo de nuevo.\"}");
+            pTxCharacteristic->notify();
+            pTxCharacteristic->setValue("{\"success\":false,\"msg\":\"Error en la conexión MQTT al servidor cloud.\"}");
+            pTxCharacteristic->notify();
+            sprintf(wifi_ssid,"%s","");
+            sprintf(wifi_passw,"%s","");
+            return;
+        }
+        connectionAttempts += 1;
     }
+
     Serial.println("");
     Serial.println("WiFi Connected");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
+    pTxCharacteristic->setValue("{\"success\":true,\"msg\":\"El dispositivo IoT ahora está conectado a Internet.\"}");
+    pTxCharacteristic->notify();
 }
 
 void startMQTT()
 {
     client.setServer(MQTT_HOST, 1883);
     client.setCallback(callback);
-    client.connect("barkbeat", MQTT_USER, MQTT_PASS);
-    Serial.print("Connect MQTT: ");
-    Serial.println(client.connected());
+    client.setKeepAlive(240); //4 minutos de conexión, terminado se desconecta
 }
 
 void startBLE()
@@ -73,17 +102,18 @@ void startBLE()
     // Create the BLE Service
     BLEService *pService = pServer->createService(SERVICE_UUID);
     // Create a BLE Characteristic
+
     pTxCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID_TX,
         BLECharacteristic::PROPERTY_NOTIFY);
-
     pTxCharacteristic->addDescriptor(new BLE2902());
 
-    BLECharacteristic *pRxCharacteristic = pService->createCharacteristic(
+    pRxCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID_RX,
         BLECharacteristic::PROPERTY_WRITE);
-
+    pRxCharacteristic->addDescriptor(new BLE2902());
     pRxCharacteristic->setCallbacks(new MyCallbacks());
+
     // Start the service
     pService->start();
     // Start advertising
@@ -91,90 +121,157 @@ void startBLE()
     Serial.println("Waiting a client connection to notify…");
 }
 
-void loopBLE()
+void reconnectBLEserver() // added
 {
-    if (deviceConnected)
+    // disconnected so advertise
+    if (!deviceConnected && oldDeviceConnected)
     {
-        // Serial.print(deviceConnected);
-
-        if (rxVal == "rxdata")
-        {
-            // Do anything here
-        }
+        delay(500);                  // give the bluetooth stack the chance to get things ready
+        pServer->startAdvertising(); // restart advertising
+        Serial.println("Disconnected: start advertising");
+        oldDeviceConnected = deviceConnected;
     }
-}
-
-void reconnectBLEserver() //added
-{
-  // disconnected so advertise
-  if (!deviceConnected && oldDeviceConnected) {
-    delay(500); // give the bluetooth stack the chance to get things ready
-    pServer->startAdvertising(); // restart advertising
-    Serial.println("Disconnected: start advertising");
-    oldDeviceConnected = deviceConnected;
-  }
-  // connected so reset boolean control
-  if (deviceConnected && !oldDeviceConnected) {
-    // do stuff here on connecting
-    Serial.println("Reconnected");
-    oldDeviceConnected = deviceConnected;
-  }
+    // connected so reset boolean control
+    if (deviceConnected && !oldDeviceConnected)
+    {
+        // do stuff here on connecting
+        Serial.println("Reconnected");
+        oldDeviceConnected = deviceConnected;
+    }
 }
 
 void reconnectMQTT()
 {
-    while (!client.connected())
+    if (WiFi.status() == WL_CONNECTED)
     {
-        Serial.println("Attempting MQTT connection...");
+        while (!client.connected())
+        {
+            Serial.println("Attempting MQTT connection...");
 
-        // Attemp to connect
-        if (client.connect("barkbeat", MQTT_USER, MQTT_PASS))
-        {
-            Serial.println("Connected");
+            // Attemp to connect
+            if (client.connect("barkbeat", MQTT_USER, MQTT_PASS))
+            {
+                Serial.println("Connected");
+                pTxCharacteristic->setValue("{\"success\":true,\"msg\":\"Se ha establecido la conexión con el servidor.\"}");
+                pTxCharacteristic->notify();
+            }
+            else
+            {
+                pTxCharacteristic->setValue("{\"success\":false,\"msg\":\"Error en la conexión MQTT al servidor cloud.\"}");
+                pTxCharacteristic->notify();
+                Serial.print("Failed, rc=");
+                Serial.print(client.state());
+                Serial.println(" try again in 2 seconds");
+                // Wait 2 seconds before retrying
+                delay(2000);
+            }
         }
-        else
-        {
-            Serial.print("Failed, rc=");
-            Serial.print(client.state());
-            Serial.println(" try again in 2 seconds");
-            // Wait 2 seconds before retrying
-            delay(2000);
-        }
+    }
+}
+
+void reconnectWIFI()
+{
+    if (WiFi.status() != WL_CONNECTED && !areWIFICredentialsEmpty())
+    {
+        startWifi();
     }
 }
 
 void setup()
 {
     Serial.begin(115200);
-    startWifi();
-    startMQTT();
     startBLE();
-
-    if (!client.connected())
-    {
-        reconnectMQTT();
-    }
-
-    initSensorAD8232(timeClient);
-    sprintf(dog_uuid, "%s", "0b1f6d8e-886f-49c1-8b4c-19605338ec6e");
+    startMQTT();
 }
 
-void loop()
+/*void loop()
 {
     if (!client.connected())
     {
         reconnectMQTT();
     }
 
-    reconnectBLEserver();
+    //reconnectBLEserver();
 
-    if (deviceConnected) // BLE is connected
+    //if (deviceConnected) // BLE is connected
+    //{
+        //sprintf(topic, "%s", TOPIC_1_ECG);
+        //sprintf(payload, "%s", "");
+
+        //loopSensorAD8232(payload, topic, dog_uuid, client);
+    //}
+
+    // loopAD8232();
+}*/
+
+void loop()
+{
+    
+    if (WiFi.status() == WL_CONNECTED && !initialized_ecg_sensor)
+    {
+        // Wifi debe estar conectado para inicializar las epochs
+        initSensorAD8232(timeClient);
+        initialized_ecg_sensor = true;
+    }
+
+    if (deviceConnected)
+    {
+        // Si hemos recibido un valor
+        if (!rxVal.empty())
+        {
+            // deserializamos en json
+            deserializeJson(doc, rxVal);
+            const char *subject_value = doc["subject"];
+            // si el asunto son credenciales wifi, strcmp devuelve 0 si las cadenas son iguales
+            if (strcmp(subject_value, "wifi-credentials") == 0)
+            {
+                const char *ssid_value = doc["ssid"];
+                const char *password_value = doc["password"];
+
+                sprintf(wifi_ssid, "%s", ssid_value);
+                sprintf(wifi_passw, "%s", password_value);
+                rxVal.clear();
+                startWifi();
+                return;
+            }
+            // si el asunto el uuid de perro
+            else if (strcmp(subject_value, "dog-id") == 0)
+            {
+                const char *uuid_value = doc["uuid"];
+                //Serial.println(uuid_value);
+                sprintf(dog_uuid, "%s", uuid_value);
+                pTxCharacteristic->setValue("{\"success\":true,\"msg\":\"Se asoció el último perro seleccionado al dispositivo IoT.\"}");
+                pTxCharacteristic->notify();
+            }
+
+            else if (strcmp(subject_value, "scan-ad8232") == 0)
+            {
+                status_scan_ecg = doc["status"].as<bool>();
+            }
+
+            // CLEAN
+            rxVal.clear();
+        }
+    }
+
+    if (status_scan_ecg && client.connected())
     {
         sprintf(topic, "%s", TOPIC_1_ECG);
         sprintf(payload, "%s", "");
 
-        loopSensorAD8232(payload, topic, dog_uuid, client);
+        if (strlen(dog_uuid) == 0)
+        {
+            pTxCharacteristic->setValue("{\"success\":false,\"msg\":\".\"}");
+            pTxCharacteristic->notify();
+        }
+        else
+        {
+            loopSensorAD8232(payload, topic, dog_uuid, client);
+        }
     }
 
-    // loopAD8232();
+    // aqui ocurre el loop de BLE
+    reconnectBLEserver();
+    reconnectWIFI();
+    reconnectMQTT();
 }
