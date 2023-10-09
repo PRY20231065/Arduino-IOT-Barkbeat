@@ -171,7 +171,7 @@ void reconnectMQTT()
 
 void reconnectWIFI()
 {
-    if (WiFi.status() != WL_CONNECTED && !areWIFICredentialsEmpty())
+    if (WiFi.status() != WL_CONNECTED && !areWIFICredentialsEmpty() && !(WiFi.getMode() == WIFI_OFF))
     {
         startWifi();
     }

@@ -19,9 +19,11 @@ std::string rxVal;
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *pServer) {
     deviceConnected = true;
+    WiFi.mode(WIFI_STA);
   };
   void onDisconnect(BLEServer *pServer) {
     deviceConnected = false;
+    WiFi.mode(WIFI_OFF);
   }
 };
 
