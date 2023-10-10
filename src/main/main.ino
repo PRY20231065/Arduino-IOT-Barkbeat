@@ -71,8 +71,8 @@ void startWifi()
             pTxCharacteristic->notify();
             pTxCharacteristic->setValue("{\"success\":false,\"msg\":\"Error en la conexión MQTT al servidor cloud.\"}");
             pTxCharacteristic->notify();
-            sprintf(wifi_ssid,"%s","");
-            sprintf(wifi_passw,"%s","");
+            sprintf(wifi_ssid, "%s", "");
+            sprintf(wifi_passw, "%s", "");
             return;
         }
         connectionAttempts += 1;
@@ -90,7 +90,7 @@ void startMQTT()
 {
     client.setServer(MQTT_HOST, 1883);
     client.setCallback(callback);
-    client.setKeepAlive(240); //4 minutos de conexión, terminado se desconecta
+    client.setKeepAlive(240); // 4 minutos de conexión, terminado se desconecta
 }
 
 void startBLE()
@@ -206,7 +206,7 @@ void setup()
 
 void loop()
 {
-    
+
     if (WiFi.status() == WL_CONNECTED && !initialized_ecg_sensor)
     {
         // Wifi debe estar conectado para inicializar las epochs
@@ -238,10 +238,19 @@ void loop()
             else if (strcmp(subject_value, "dog-id") == 0)
             {
                 const char *uuid_value = doc["uuid"];
-                //Serial.println(uuid_value);
+                // Serial.println(uuid_value);
                 sprintf(dog_uuid, "%s", uuid_value);
-                pTxCharacteristic->setValue("{\"success\":true,\"msg\":\"Se asoció el último perro seleccionado al dispositivo IoT.\"}");
-                pTxCharacteristic->notify();
+
+                if (strlen(dog_uuid) == 0)
+                {
+                    pTxCharacteristic->setValue("{\"success\":false,\"msg\":\"No se pudo asociar el perro seleccionado al dispositivo IoT.\"}");
+                    pTxCharacteristic->notify();
+                }
+                else
+                {
+                    pTxCharacteristic->setValue("{\"success\":true,\"msg\":\"Se asoció el último perro seleccionado al dispositivo IoT.\"}");
+                    pTxCharacteristic->notify();
+                }
             }
 
             else if (strcmp(subject_value, "scan-ad8232") == 0)
@@ -254,20 +263,14 @@ void loop()
         }
     }
 
-    if (status_scan_ecg && client.connected())
+    if (status_scan_ecg && !(strlen(dog_uuid) == 0))
     {
         sprintf(topic, "%s", TOPIC_1_ECG);
         sprintf(payload, "%s", "");
 
-        if (strlen(dog_uuid) == 0)
-        {
-            pTxCharacteristic->setValue("{\"success\":false,\"msg\":\".\"}");
-            pTxCharacteristic->notify();
-        }
-        else
-        {
-            loopSensorAD8232(payload, topic, dog_uuid, client);
-        }
+       
+
+        loopSensorAD8232(payload, topic, dog_uuid, client);
     }
 
     // aqui ocurre el loop de BLE
