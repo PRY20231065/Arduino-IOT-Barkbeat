@@ -7,6 +7,7 @@
 #include <ArduinoJson.h>
 #include "lib/ecg_sensor/AD8232.h"
 #include "lib/bluetooth/BLEconnection.h"
+#include "lib/pulse_sensor/MAX30102.h"
 
 /*******************Constants**************************/
 // #define WIFISSID ""
@@ -25,14 +26,18 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org");
 BLEServer *pServer;
 
 //****************Variables****************************
-char payload[500];
-char topic[20];
+char payload1[500];
+char topic1[20];
+char payload2[500];
+char topic2[20];
 char dog_uuid[37];
 char wifi_ssid[100];
 char wifi_passw[50];
 bool new_wifi_credentials = false;
 bool status_scan_ecg = false;
+bool status_scan_pulse = true;
 bool initialized_ecg_sensor = false;
+bool initialized_pulse_sensor = false;
 
 DynamicJsonDocument doc(512);
 //*****************Methods*****************************
@@ -214,6 +219,19 @@ void loop()
         initialized_ecg_sensor = true;
     }
 
+    if (WiFi.status() == WL_CONNECTED && !initialized_pulse_sensor)
+    {
+        if (initSensorMAX30102())
+        {
+            initialized_pulse_sensor = true;
+        }
+        else
+        {
+            pTxCharacteristic->setValue("{\"success\":false,\"msg\":\"MAX30102 was not found. Please check wiring/power. .\"}");
+            pTxCharacteristic->notify();
+        }
+    }
+
     if (deviceConnected)
     {
         // Si hemos recibido un valor
@@ -258,19 +276,33 @@ void loop()
                 status_scan_ecg = doc["status"].as<bool>();
             }
 
+            else if (strcmp(subject_value, "scan-max30102") == 0)
+            {
+                status_scan_pulse = doc["status"].as<bool>();
+            }
+
             // CLEAN
             rxVal.clear();
         }
     }
 
-    if (status_scan_ecg && !(strlen(dog_uuid) == 0))
+    if (!(strlen(dog_uuid) == 0))
     {
-        sprintf(topic, "%s", TOPIC_1_ECG);
-        sprintf(payload, "%s", "");
+        if (status_scan_ecg)
+        {
+            sprintf(topic1, "%s", TOPIC_1_ECG);
+            sprintf(payload1, "%s", "");
 
-       
+            loopSensorAD8232(payload1, topic1, dog_uuid, client);
+        }
 
-        loopSensorAD8232(payload, topic, dog_uuid, client);
+        if (status_scan_pulse)
+        {
+            sprintf(topic2, "%s", TOPIC_2_PULSE);
+            sprintf(payload2, "%s", "");
+
+            loopSensorMAX30102(payload2, topic2, dog_uuid, client);
+        }
     }
 
     // aqui ocurre el loop de BLE
