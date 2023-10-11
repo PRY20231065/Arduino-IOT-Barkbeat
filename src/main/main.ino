@@ -221,7 +221,7 @@ void loop()
 
     if (WiFi.status() == WL_CONNECTED && !initialized_pulse_sensor)
     {
-        if (initSensorMAX30102())
+        if (initSensorMAX30102(timeClient))
         {
             initialized_pulse_sensor = true;
         }

@@ -5,6 +5,7 @@
 #include <Wire.h>
 #include "MAX30105.h"
 #include "heartRate.h"
+#include <NTPClient.h>
 
 /***************Global variables**************/
 MAX30105 particleSensor;
@@ -15,9 +16,20 @@ long lastBeat = 0; // Time at which the last beat occurred
 float beatsPerMinute = 0;
 int beatAvg = 0;
 int previousAvg = 0;
+double _epochseconds = 0;
+double _epochmilliseconds = 0;
+double _current_millis = 0;
+char _str_millis[20];
+double _current_millis_at_sensordata = 0;
+double _timestampp = 0;
 
-bool initSensorMAX30102()
+bool initSensorMAX30102(NTPClient &ntp)
 {
+    ntp.update();
+    _epochseconds = ntp.getEpochTime();
+    _epochmilliseconds = _epochseconds * 1000;
+    _current_millis = millis();
+
     if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) // Use default I2C port, 400kHz speed
     {
         return false;
@@ -63,13 +75,20 @@ void loopSensorMAX30102(char (&payload)[500], char (&topic)[20], char (&dog_uuid
         //Serial.println(beatsPerMinute);
         //Serial.println(beatAvg);
         //Serial.println("formateamos");
-        sprintf(payload, "%s %.2f, ", payload, beatsPerMinute);
+        
         //Serial.println(payload);
-        sprintf(payload, "%s \"avg\": %d }", payload, beatAvg);
+        
         //Serial.println(payload);
         
         //Serial.println("publicar");
         if(previousAvg != beatAvg){
+            _current_millis_at_sensordata = millis();
+            _timestampp = _epochmilliseconds + (_current_millis_at_sensordata - _current_millis);
+            dtostrf(_timestampp, 10, 0, _str_millis);
+
+            sprintf(payload, "%s %.2f, ", payload, beatsPerMinute);
+            sprintf(payload, "%s \"avg\": %d ,", payload, beatAvg);
+            sprintf(payload, "%s \"created_time\": %s }", payload, _str_millis);
             client.publish(topic, payload);
             Serial.println(payload);
         }
