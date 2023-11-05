@@ -17,6 +17,7 @@
 #define MQTT_PASS "WgR4YMg724634tHQnXpz"
 #define TOPIC_1_ECG "AD8232"
 #define TOPIC_2_PULSE "MAX30102"
+#define TOPIC_3_TEMP "TEMP"
 
 /********************Classes***************************/
 WiFiClient espClient;
@@ -30,6 +31,8 @@ char payload1[500];
 char topic1[20];
 char payload2[500];
 char topic2[20];
+char payload3[500];
+char topic3[20];
 char dog_uuid[37];
 char wifi_ssid[100];
 char wifi_passw[50];
@@ -298,11 +301,16 @@ void loop()
 
         if (status_scan_pulse)
         {
-            sprintf(topic2, "%s", TOPIC_2_PULSE);
-            sprintf(payload2, "%s", "");
+            sprintf(topic3, "%s", TOPIC_2_PULSE);
+            sprintf(payload3, "%s", "");
 
             loopSensorMAX30102(payload2, topic2, dog_uuid, client);
         }
+
+        sprintf(topic3, "%s", TOPIC_3_TEMP);
+        sprintf(payload3, "%s", "");
+
+        loopScanTemperatureMAX30102(payload3,topic3, dog_uuid, client);
     }
 
     // aqui ocurre el loop de BLE

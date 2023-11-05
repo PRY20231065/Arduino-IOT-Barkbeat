@@ -40,13 +40,35 @@ bool initSensorMAX30102(NTPClient &ntp)
     particleSensor.setup();                    // Configure sensor with default settings
     particleSensor.setPulseAmplitudeRed(0x0A); // Turn Red LED to low to indicate sensor is running
     particleSensor.setPulseAmplitudeGreen(0);  // Turn off Green LED
+    particleSensor.enableDIETEMPRDY();
     return true;
+}
+
+void loopScanTemperatureMAX30102(char (&payload)[500], char (&topic)[20], char (&dog_uuid)[37], PubSubClient &client)
+{
+    long irValue = particleSensor.getIR();
+
+    if (irValue > 50000)
+    {
+        sprintf(payload, "{ \"dog_id\": \"%s\", \"temp\": ", dog_uuid);
+        float temperature = particleSensor.readTemperature();
+        
+        // Hay contacto
+        _current_millis_at_sensordata = millis();
+        _timestampp = _epochmilliseconds + (_current_millis_at_sensordata - _current_millis);
+        dtostrf(_timestampp, 10, 0, _str_millis);
+
+        sprintf(payload, "%s %.1f, ", payload, temperature);
+
+        sprintf(payload, "%s \"created_time\": %s }", payload, _str_millis);
+        client.publish(topic, payload);
+        Serial.println(payload);
+    }
 }
 
 void loopSensorMAX30102(char (&payload)[500], char (&topic)[20], char (&dog_uuid)[37], PubSubClient &client)
 {
-    sprintf(payload, "{ \"dog_id\": \"%s\", \"beats_per_minute\": ", dog_uuid);
-
+    
     long irValue = particleSensor.getIR();
 
     if (checkForBeat(irValue) == true)
@@ -57,7 +79,7 @@ void loopSensorMAX30102(char (&payload)[500], char (&topic)[20], char (&dog_uuid
 
         beatsPerMinute = 60 / (delta / 1000.0);
 
-        if (beatsPerMinute < 255 && beatsPerMinute > 20)
+        if (beatsPerMinute < 200 && beatsPerMinute > 60)
         {
             rates[rateSpot++] = (byte)beatsPerMinute; // Store this reading in the array
             rateSpot %= RATE_SIZE;                    // Wrap variable
@@ -70,18 +92,22 @@ void loopSensorMAX30102(char (&payload)[500], char (&topic)[20], char (&dog_uuid
         }
     }
 
-    if(irValue > 50000){
-        //Serial.println("hay dedo");
-        //Serial.println(beatsPerMinute);
-        //Serial.println(beatAvg);
-        //Serial.println("formateamos");
-        
-        //Serial.println(payload);
-        
-        //Serial.println(payload);
-        
-        //Serial.println("publicar");
-        if(previousAvg != beatAvg){
+    if (irValue > 50000)
+    {
+        // Serial.println("hay dedo");
+        // Serial.println(beatsPerMinute);
+        // Serial.println(beatAvg);
+        // Serial.println("formateamos");
+
+        // Serial.println(payload);
+
+        // Serial.println(payload);
+
+        // Serial.println("publicar");
+        sprintf(payload, "{ \"dog_id\": \"%s\", \"beats_per_minute\": ", dog_uuid);
+
+        if (previousAvg != beatAvg)
+        {
             _current_millis_at_sensordata = millis();
             _timestampp = _epochmilliseconds + (_current_millis_at_sensordata - _current_millis);
             dtostrf(_timestampp, 10, 0, _str_millis);
@@ -92,19 +118,17 @@ void loopSensorMAX30102(char (&payload)[500], char (&topic)[20], char (&dog_uuid
             client.publish(topic, payload);
             Serial.println(payload);
         }
-        
-        //Serial.println("publicado");
+
+        // Serial.println("publicado");
         previousAvg = beatAvg;
     }
 
-    
-
-    //Serial.print("IR=");
-    //Serial.print(irValue);
-    //Serial.print(", BPM=");
-    //Serial.print(beatsPerMinute);
-    //Serial.print(", Avg BPM=");
-    //Serial.print(beatAvg);
+    // Serial.print("IR=");
+    // Serial.print(irValue);
+    // Serial.print(", BPM=");
+    // Serial.print(beatsPerMinute);
+    // Serial.print(", Avg BPM=");
+    // Serial.print(beatAvg);
 
     // if (irValue < 50000)
     //   Serial.print(" No finger?");
